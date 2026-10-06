@@ -47,7 +47,7 @@ object PreloadedData {
             foundedYear = 1926,
             history = "Based in Borgo Panigale, Bologna, Ducati represents pure Italian passion, desmodromic valve actuation, V4 engines, and multiple MotoGP & World Superbike Championship crowns.",
             websiteUrl = "https://www.ducati.com",
-            logoUrl = "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=400&q=80",
+            logoUrl = "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=400&q=80",
             accentColorHex = 0xFFCC0000
         ),
         BrandEntity(
@@ -137,7 +137,7 @@ object PreloadedData {
             foundedYear = 1989,
             history = "Rapidly expanding global power known for premium Kiska-designed sport, naked and adventure bikes with high-spec Brembo, Bosch, and KYB components.",
             websiteUrl = "https://www.cfmoto.com",
-            logoUrl = "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=400&q=80",
+            logoUrl = "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=400&q=80",
             accentColorHex = 0xFF00A3E0
         ),
         BrandEntity(
@@ -177,7 +177,7 @@ object PreloadedData {
             foundedYear = 1945,
             history = "'Motorcycle Art' sculpted in Schiranna on Lake Varese, holding 38 World Championship titles and famed for high-revving triples and limited-edition superbikes.",
             websiteUrl = "https://www.mvagusta.com",
-            logoUrl = "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=400&q=80",
+            logoUrl = "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=400&q=80",
             accentColorHex = 0xFF990000
         ),
         BrandEntity(

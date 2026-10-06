@@ -3,15 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MotoScope - Global Motorcycle Encyclopedia</title>
-  <meta name="description" content="Explore international motorcycle specs, compare up to 3 bikes side-by-side, calculate EMI & on-road prices, and get expert guidance with Google Gemini AI.">
+  <title>MotoScope - Global Motorcycle Encyclopedia & AI Advisor</title>
+  <meta name="description" content="Explore international motorcycle specs across 70+ bikes, compare side-by-side, calculate EMI, and research technical details with Google Gemini AI.">
+  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDKs (Compat for Web) -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -40,10 +49,7 @@
       background-color: #020617;
       color: #f8fafc;
       font-family: 'Plus Jakarta Sans', sans-serif;
-      padding-bottom: 90px; /* Space for bottom nav */
-    }
-    .neon-glow {
-      box-shadow: 0 0 20px rgba(0, 245, 255, 0.25);
+      padding-bottom: 85px;
     }
     .neon-border {
       border: 1px solid rgba(0, 245, 255, 0.4);
@@ -85,12 +91,12 @@
 </head>
 <body class="bg-slate950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
 
-  <!-- TOP APK DOWNLOAD ANNOUNCEMENT BAR -->
-  <div class="bg-gradient-to-r from-cyan-950 via-slate-900 to-amber-950 border-b border-cyan-500/20 py-2 px-3 text-xs text-center flex items-center justify-between gap-2 z-40 sticky top-0 backdrop-blur-md">
+  <!-- TOP ANNOUNCEMENT & LIVE SYNC STRIP -->
+  <div class="bg-gradient-to-r from-cyan-950 via-slate-900 to-amber-950 border-b border-cyan-500/20 py-2 px-3 text-xs flex items-center justify-between gap-2 z-40 sticky top-0 backdrop-blur-md">
     <div class="flex items-center gap-2 truncate">
       <span class="w-2 h-2 rounded-full bg-cyanNeon animate-ping shrink-0"></span>
-      <span class="text-cyan-300 font-semibold truncate hidden sm:inline">Official MotoScope Android App Live!</span>
-      <span class="text-cyan-300 font-semibold truncate sm:hidden">MotoScope Android App</span>
+      <span class="text-cyan-300 font-semibold truncate hidden sm:inline" id="cloudStatusText">☁️ Cloud Synced (70 Bikes) • Official Android App Live</span>
+      <span class="text-cyan-300 font-semibold truncate sm:hidden">MotoScope Global</span>
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <a href="https://github.com/texus0075/motorcycle-/raw/main/MotoScope.apk" download class="inline-flex items-center gap-1.5 bg-cyanNeon text-slate950 font-bold px-3 py-1 rounded-full text-xs hover:bg-cyan-300 transition shadow-sm">
@@ -102,28 +108,36 @@
     </div>
   </div>
 
-  <!-- TOP HEADER / DESKTOP NAV -->
+  <!-- MAIN HEADER / NAVBAR -->
   <header class="bg-slate950/90 border-b border-slate800 py-3 px-4">
     <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('home')">
+      <!-- Logo with Secret Admin Trigger (Click 3 times to open Secret Admin) -->
+      <div class="flex items-center gap-3 cursor-pointer select-none" id="mainLogoTrigger">
         <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyanNeon/40 flex items-center justify-center text-cyanNeon">
           <i class="fa-solid fa-motorcycle text-lg"></i>
         </div>
         <div>
           <h1 class="font-display font-black text-xl tracking-wide bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent">MotoScope</h1>
-          <p class="text-[10px] text-cyanNeon font-bold tracking-widest uppercase -mt-1">Global Encyclopedia</p>
+          <p class="text-[10px] text-cyanNeon font-bold tracking-widest uppercase -mt-1">Encyclopedia • 70+ Models</p>
         </div>
       </div>
 
-      <!-- Quick Action Buttons -->
-      <div class="flex items-center gap-2">
+      <!-- Header Actions: EMI, Compare, and PROMINENT AUTH BUTTON -->
+      <div class="flex items-center gap-2.5">
         <button onclick="openEmiModal()" class="hidden md:flex items-center gap-1.5 bg-slate900 border border-slate700 hover:border-cyanNeon text-slate-300 px-3 py-1.5 rounded-xl text-xs transition">
-          <i class="fa-solid fa-calculator text-amber-400"></i> EMI Calculator
+          <i class="fa-solid fa-calculator text-amber-400"></i> EMI Estimator
         </button>
+
         <button onclick="switchTab('compare')" class="relative flex items-center gap-1.5 bg-slate900 border border-slate700 hover:border-cyanNeon text-slate-300 px-3 py-1.5 rounded-xl text-xs transition">
           <i class="fa-solid fa-arrow-right-arrow-left text-cyanNeon"></i>
-          <span>Compare</span>
+          <span class="hidden sm:inline">Compare</span>
           <span id="topCompareBadge" class="bg-cyanNeon text-slate950 text-[10px] font-black px-1.5 py-0.2 rounded-full hidden">0</span>
+        </button>
+
+        <!-- PROMINENT AUTH BUTTON -->
+        <button onclick="openAuthModal()" id="headerAuthBtn" class="bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 border border-cyan-500/40 text-cyan-300 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-user-circle text-cyanNeon"></i>
+          <span id="headerAuthLabel">Sign In</span>
         </button>
       </div>
     </div>
@@ -133,39 +147,39 @@
   <main class="max-w-6xl mx-auto w-full px-4 pt-4 flex-grow">
 
     <!-- 1. HOME TAB -->
-    <section id="tab-home" class="space-y-6">
-      <!-- Search & Filter Bar -->
+    <section id="tab-home" class="space-y-5">
+      <!-- Search Bar -->
       <div class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-500"></i>
-        <input type="text" id="homeSearchInput" oninput="handleSearch(this.value)" placeholder="Search by model, brand, or displacement (e.g., S 1000 RR, 999cc, Yamaha)..." class="w-full bg-slate900 border border-slate800 focus:border-cyanNeon rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none transition">
+        <input type="text" id="homeSearchInput" oninput="handleSearch(this.value)" placeholder="Search 70+ motorcycles by model, brand, or engine CC (e.g. Panigale, S 1000 RR, 999cc)..." class="w-full bg-slate900 border border-slate800 focus:border-cyanNeon rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none transition">
       </div>
 
-      <!-- Quick Category Chips -->
+      <!-- Category Filter Pills -->
       <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-        <button onclick="filterCategory('All')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-cyanNeon text-slate950 whitespace-nowrap transition">All Models</button>
+        <button onclick="filterCategory('All')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-cyanNeon text-slate950 whitespace-nowrap transition">All Models (70)</button>
         <button onclick="filterCategory('Super Sport')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Super Sport</button>
         <button onclick="filterCategory('Sport')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Sport</button>
         <button onclick="filterCategory('Naked')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Naked</button>
         <button onclick="filterCategory('Cruiser')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Cruiser</button>
-        <button onclick="filterCategory('Adventure')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Adventure</button>
-        <button onclick="filterCategory('Retro')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Retro</button>
+        <button onclick="filterCategory('Adventure')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Adventure / ADV</button>
+        <button onclick="filterCategory('Retro')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate900 border border-slate800 text-slate-300 hover:border-cyanNeon whitespace-nowrap transition">Modern Classic / Retro</button>
       </div>
 
-      <!-- Featured Banner / Ad Card -->
+      <!-- Quick Banner -->
       <div class="bg-gradient-to-r from-slate900 to-slate850 border border-slate800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="bg-amberOrange/20 text-amberOrange text-[10px] uppercase font-black px-2 py-0.5 rounded">Featured Match</span>
-            <span class="text-xs text-slate-400">Head-to-head performance verified</span>
+            <span class="bg-amberOrange/20 text-amberOrange text-[10px] uppercase font-black px-2 py-0.5 rounded">Verified Homologation</span>
+            <span class="text-xs text-slate-400">Tap any motorcycle card to view deep engineering telemetry</span>
           </div>
-          <h2 class="text-base font-bold text-white">Compare up to 3 Superbikes side-by-side</h2>
+          <h2 class="text-sm sm:text-base font-bold text-white">70 Verified Global Models • Tap card for full specs</h2>
         </div>
-        <button onclick="switchTab('explore')" class="bg-cyanNeon text-slate950 font-bold px-4 py-2 rounded-xl text-xs hover:bg-cyan-300 transition flex items-center gap-1.5">
-          Explore All <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        <button onclick="switchTab('brands')" class="bg-slate900 border border-cyanNeon text-cyanNeon font-bold px-3.5 py-2 rounded-xl text-xs hover:bg-cyan-500/10 transition flex items-center gap-1.5">
+          Browse by Brand <i class="fa-solid fa-arrow-right text-[10px]"></i>
         </button>
       </div>
 
-      <!-- Motorcycle Cards Feed (Matches Vivo Mobile App UI 1:1) -->
+      <!-- Motorcycle Cards Feed -->
       <div id="homeBikeFeed" class="space-y-4 max-w-2xl mx-auto">
         <!-- Rendered dynamically -->
       </div>
@@ -175,33 +189,47 @@
     <section id="tab-explore" class="hidden space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-white font-display">Explore Catalog</h2>
-          <p class="text-xs text-slate-400">Complete database of international specifications</p>
+          <h2 class="text-xl font-bold text-white font-display">Explore Full Catalog</h2>
+          <p class="text-xs text-slate-400">Complete database of 70+ international specifications</p>
         </div>
-        <div class="text-xs text-cyanNeon font-mono font-bold" id="exploreCountBadge">10 Bikes</div>
+        <div class="text-xs text-cyanNeon font-mono font-bold" id="exploreCountBadge">70 Bikes</div>
       </div>
 
-      <!-- Search in explore -->
       <div class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-500"></i>
-        <input type="text" id="exploreSearchInput" oninput="handleExploreSearch(this.value)" placeholder="Filter by horsepower, weight, brand..." class="w-full bg-slate900 border border-slate800 focus:border-cyanNeon rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none transition">
+        <input type="text" id="exploreSearchInput" oninput="handleExploreSearch(this.value)" placeholder="Filter by horsepower, weight, category, or brand..." class="w-full bg-slate900 border border-slate800 focus:border-cyanNeon rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none transition">
       </div>
 
-      <!-- Grid of bikes -->
       <div id="exploreBikeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Rendered dynamically -->
       </div>
     </section>
 
-    <!-- 3. BRANDS TAB -->
+    <!-- 3. BRANDS TAB (PURE BRAND SHOWROOM, NO COUNTRY GROUPS) -->
     <section id="tab-brands" class="hidden space-y-6">
-      <div>
-        <h2 class="text-xl font-bold text-white font-display">Global Motorcycle Brands</h2>
-        <p class="text-xs text-slate-400">Heritage, origins, and race pedigree from world-class manufacturers</p>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-white font-display">Motorcycle Brands</h2>
+          <p class="text-xs text-slate-400">Select any brand to see their complete bike lineup from beginning to latest</p>
+        </div>
+        <button id="brandBackBtn" onclick="showAllBrands()" class="hidden text-xs text-cyanNeon hover:underline flex items-center gap-1 font-bold">
+          <i class="fa-solid fa-arrow-left"></i> All Brands
+        </button>
       </div>
 
-      <div id="brandsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Brands Grid (When no specific brand is selected) -->
+      <div id="brandsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Brand Dedicated Showroom (When a specific brand is clicked) -->
+      <div id="brandDetailView" class="hidden space-y-4">
+        <div id="brandDetailHeader" class="bg-slate850 border border-slate800 rounded-2xl p-5 space-y-2">
+          <!-- Injected dynamically -->
+        </div>
+        <div id="brandBikesFeed" class="space-y-4 max-w-2xl mx-auto">
+          <!-- Injected dynamically -->
+        </div>
       </div>
     </section>
 
@@ -227,7 +255,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-white font-display">Saved Motorcycles</h2>
-          <p class="text-xs text-slate-400">Your bookmarked bikes saved for offline reference</p>
+          <p class="text-xs text-slate-400">Your bookmarked bikes saved for quick reference</p>
         </div>
         <div id="savedCountBadge" class="text-xs text-amberOrange font-bold">0 Saved</div>
       </div>
@@ -237,81 +265,9 @@
       </div>
     </section>
 
-    <!-- 6. STUDIO / ADMIN TAB (Matches Vivo Mobile App UI 1:1) -->
-    <section id="tab-studio" class="hidden space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-xl font-bold text-white font-display">Admin Studio</h2>
-          <p class="text-xs text-slate-400">Manage global catalog, add models, validate specs</p>
-        </div>
-        <button onclick="promptResetDatabase()" class="bg-red-500/20 border border-red-500/40 hover:bg-red-500 hover:text-white text-red-300 font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5">
-          <i class="fa-solid fa-rotate-left"></i> Reset Database
-        </button>
-      </div>
-
-      <!-- Add New Motorcycle Form -->
-      <div class="bg-slate850 border border-slate800 rounded-2xl p-5 space-y-4">
-        <h3 class="text-sm font-bold text-cyanNeon flex items-center gap-2">
-          <i class="fa-solid fa-circle-plus"></i> Add New Motorcycle Model
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div>
-            <label class="block text-slate-400 mb-1">Model Name</label>
-            <input type="text" id="newModelName" placeholder="e.g., Yamaha MT-09" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Brand</label>
-            <input type="text" id="newBrand" placeholder="e.g., Yamaha" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Category</label>
-            <select id="newCategory" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-              <option value="Super Sport">Super Sport</option>
-              <option value="Sport">Sport</option>
-              <option value="Naked">Naked</option>
-              <option value="Cruiser">Cruiser</option>
-              <option value="Adventure">Adventure</option>
-              <option value="Retro">Retro</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Price (₹ or $)</label>
-            <input type="text" id="newPrice" placeholder="e.g., ₹11,50,000 ($10,500)" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Power (HP)</label>
-            <input type="number" id="newPower" placeholder="117.3" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Engine Displacement (cc)</label>
-            <input type="number" id="newEngine" placeholder="890" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Weight (kg)</label>
-            <input type="number" id="newWeight" placeholder="193" class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Image URL</label>
-            <input type="text" id="newImg" placeholder="https://images.unsplash.com/..." class="w-full bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
-          </div>
-        </div>
-        <button onclick="handleAddNewBike()" class="w-full bg-cyanNeon hover:bg-cyan-300 text-slate950 font-bold py-2.5 rounded-xl text-xs transition">
-          Save Motorcycle to Local & Cloud Catalog
-        </button>
-      </div>
-
-      <!-- Studio Catalog List -->
-      <div class="space-y-3">
-        <h3 class="text-sm font-bold text-white">Current Models in Studio (<span id="studioCount">10</span>)</h3>
-        <div id="studioBikesList" class="space-y-2">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
-    </section>
-
   </main>
 
-  <!-- FLOATING QUICK-COMPARE DRAWER (Matches Vivo Mobile App UI 1:1) -->
+  <!-- FLOATING QUICK-COMPARE DRAWER -->
   <div id="comparisonSlotBar" class="fixed bottom-16 left-0 right-0 z-40 px-3 py-2 pointer-events-none transition-transform duration-300 translate-y-32">
     <div class="max-w-xl mx-auto bg-slate900/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-2xl pointer-events-auto">
       <div id="slotThumbnails" class="flex items-center gap-2 overflow-x-auto">
@@ -324,9 +280,9 @@
     </div>
   </div>
 
-  <!-- BOTTOM NAVIGATION BAR (Matches Vivo Mobile App UI 1:1) -->
+  <!-- CLEAN 5-TAB BOTTOM NAVIGATION BAR (NO STUDIO FOR REGULAR USERS) -->
   <nav class="fixed bottom-0 left-0 right-0 z-50 bg-slate900/95 backdrop-blur-md border-t border-slate800">
-    <div class="max-w-xl mx-auto grid grid-cols-6 h-16">
+    <div class="max-w-xl mx-auto grid grid-cols-5 h-16">
       <!-- 1. Home -->
       <button onclick="switchTab('home')" id="nav-btn-home" class="flex flex-col items-center justify-center gap-1 text-cyanNeon transition">
         <i class="fa-solid fa-house text-lg"></i>
@@ -341,7 +297,7 @@
 
       <!-- 3. Brands -->
       <button onclick="switchTab('brands')" id="nav-btn-brands" class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-cyanNeon transition">
-        <i class="fa-solid fa-building text-lg"></i>
+        <i class="fa-solid fa-shield-halved text-lg"></i>
         <span class="text-[10px] font-bold">Brands</span>
       </button>
 
@@ -359,34 +315,200 @@
         <i class="fa-solid fa-bookmark text-lg"></i>
         <span class="text-[10px] font-bold">Saved</span>
       </button>
-
-      <!-- 6. Studio -->
-      <button onclick="switchTab('studio')" id="nav-btn-studio" class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-cyanNeon transition">
-        <i class="fa-solid fa-shield-halved text-lg"></i>
-        <span class="text-[10px] font-bold">Studio</span>
-      </button>
     </div>
   </nav>
 
-  <!-- MODAL: RESET DATABASE CONFIRMATION (Matches Vivo Dialog) -->
-  <div id="resetModal" class="fixed inset-0 z-50 bg-slate950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate900 border border-slate800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-      <h3 class="text-lg font-bold text-white">Reset Motorcycle Database?</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">
-        This will restore all default official global models (Yamaha, KTM, Kawasaki, Ducati, BMW, Triumph, Royal Enfield, etc.) and preloaded verified specifications.
-      </p>
-      <div class="flex items-center justify-end gap-3 pt-2">
-        <button onclick="closeResetModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate800 transition">
-          Cancel
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. ULTRA-DEEP MOTORCYCLE SPECIFICATION MODAL (OPENS ON BIKE CLICK) -->
+  <div id="deepBikeModal" class="fixed inset-0 z-50 bg-slate950/85 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-slate900 border border-slate800 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+      <!-- Modal Header -->
+      <div class="bg-slate850 border-b border-slate800 px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5 truncate">
+          <span id="deepBrandPill" class="bg-slate950 border border-slate700 text-cyanNeon text-[10px] font-black px-2 py-0.5 rounded uppercase">BRAND</span>
+          <h3 id="deepModalTitle" class="text-base font-bold text-white truncate">Motorcycle Details</h3>
+        </div>
+        <button onclick="closeDeepModal()" class="w-8 h-8 rounded-full hover:bg-slate800 text-slate-400 hover:text-white flex items-center justify-center text-base">
+          <i class="fa-solid fa-xmark"></i>
         </button>
-        <button onclick="executeResetDatabase()" class="bg-amberOrange hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
-          Confirm Reset
-        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div id="deepModalContent" class="overflow-y-auto p-5 space-y-6 text-xs sm:text-sm">
+        <!-- Injected dynamically with all technical sheets -->
       </div>
     </div>
   </div>
 
-  <!-- MODAL: GOOGLE GEMINI AI BUYING ADVISOR -->
+  <!-- 2. AUTHENTICATION MODAL (FIREBASE AUTH) -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-slate950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate900 border border-slate800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyanNeon flex items-center justify-center">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Firebase Authentication</h3>
+        </div>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- If Logged In View -->
+      <div id="authLoggedInView" class="hidden space-y-4 text-center">
+        <div class="w-16 h-16 rounded-full bg-cyanNeon/20 text-cyanNeon flex items-center justify-center mx-auto text-2xl font-black">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div>
+          <h4 id="authUserEmail" class="text-white font-bold text-sm">user@example.com</h4>
+          <span class="text-xs text-trackGreen font-semibold">● Active Firebase Session</span>
+        </div>
+        <button onclick="handleSignOut()" class="w-full bg-red-500/20 border border-red-500/40 hover:bg-red-500 text-red-200 hover:text-white font-bold py-2.5 rounded-xl text-xs transition">
+          Sign Out
+        </button>
+      </div>
+
+      <!-- If Logged Out View -->
+      <div id="authLoggedOutView" class="space-y-4">
+        <!-- Email & Password Form -->
+        <div class="space-y-3">
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Email Address</label>
+            <input type="email" id="authEmailInput" placeholder="name@example.com" class="w-full bg-slate950 border border-slate700 rounded-xl px-3 py-2 text-xs text-white focus:border-cyanNeon outline-none">
+          </div>
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Password</label>
+            <input type="password" id="authPasswordInput" placeholder="••••••••" class="w-full bg-slate950 border border-slate700 rounded-xl px-3 py-2 text-xs text-white focus:border-cyanNeon outline-none">
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="handleEmailSignIn()" class="flex-1 bg-cyanNeon hover:bg-cyan-300 text-slate950 font-bold py-2.5 rounded-xl text-xs transition">
+            Sign In
+          </button>
+          <button onclick="handleEmailSignUp()" class="flex-1 bg-slate800 hover:bg-slate700 text-slate-200 font-bold py-2.5 rounded-xl text-xs transition border border-slate700">
+            Create Account
+          </button>
+        </div>
+
+        <div class="relative flex items-center justify-center">
+          <div class="border-t border-slate800 w-full"></div>
+          <span class="bg-slate900 px-2 text-[10px] text-slate-500 uppercase tracking-widest absolute">Or</span>
+        </div>
+
+        <!-- Google & Guest -->
+        <div class="space-y-2">
+          <button onclick="handleGoogleSignIn()" class="w-full bg-slate950 hover:bg-slate800 border border-slate700 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+            <i class="fa-brands fa-google text-red-400"></i> Continue with Google
+          </button>
+          <button onclick="handleAnonymousSignIn()" class="w-full bg-slate950/60 hover:bg-slate800 border border-slate800 text-slate-400 hover:text-white py-2 rounded-xl text-xs transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-user-secret"></i> Continue as Guest
+          </button>
+        </div>
+
+        <div id="authErrorMsg" class="hidden text-xs text-red-400 bg-red-500/10 p-2.5 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SECRET CREATOR ADMIN PANEL (TRIGGERED BY Ctrl+Shift+Z OR 3-CLICKS ON LOGO) -->
+  <div id="secretAdminModal" class="fixed inset-0 z-50 bg-slate950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="bg-slate900 border border-cyan-500/40 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+      <div class="bg-slate850 border-b border-slate800 p-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyanNeon animate-ping"></span>
+          <h3 class="text-base font-bold text-white">Creator Admin Studio (Cloud Firestore)</h3>
+        </div>
+        <button onclick="closeSecretAdmin()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-5 text-xs">
+        <!-- AI Auto-Fetch Box -->
+        <div class="bg-slate850 border border-cyan-500/30 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-cyanNeon flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click AI Auto-Fetch Specs
+            </span>
+            <span class="text-[10px] text-slate-400">Powered by Google Gemini 2.5 Flash</span>
+          </div>
+          <p class="text-slate-300 text-xs">Just write the bike name. Gemini AI will research and auto-fill all technical specs, pricing, and photo automatically without copy-pasting!</p>
+          <div class="flex gap-2">
+            <input type="text" id="aiFetchBikeName" placeholder="e.g. Ducati Streetfighter V4 SP2, Kawasaki Ninja ZX-4RR..." class="flex-grow bg-slate900 border border-slate700 rounded-xl px-3 py-2 text-white focus:border-cyanNeon outline-none">
+            <button onclick="executeAiAutoFetch()" id="aiFetchBtn" class="bg-cyanNeon hover:bg-cyan-300 text-slate950 font-black px-4 py-2 rounded-xl shrink-0 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-bolt"></i> Auto-Fetch
+            </button>
+          </div>
+        </div>
+
+        <!-- Add / Edit Form -->
+        <div class="bg-slate950 border border-slate800 rounded-2xl p-4 space-y-3">
+          <h4 class="font-bold text-white text-xs uppercase tracking-wider text-slate-400">Motorcycle Metadata</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Model Name</label>
+              <input type="text" id="adminModelName" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Brand</label>
+              <input type="text" id="adminBrand" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Category</label>
+              <select id="adminCategory" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+                <option value="Super Sport">Super Sport</option>
+                <option value="Sport">Sport</option>
+                <option value="Naked">Naked</option>
+                <option value="Cruiser">Cruiser</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Retro">Retro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Price Display (USD & INR)</label>
+              <input type="text" id="adminPrice" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Horsepower (HP)</label>
+              <input type="number" id="adminPower" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Engine Displacement (cc)</label>
+              <input type="number" id="adminEngine" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Kerb Weight (kg)</label>
+              <input type="number" id="adminWeight" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Top Speed (km/h)</label>
+              <input type="number" id="adminTopSpeed" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-slate-400 mb-1">Verified Motorcycle Image URL</label>
+              <input type="text" id="adminImg" class="w-full bg-slate900 border border-slate800 rounded-xl px-3 py-1.5 text-white outline-none focus:border-cyanNeon">
+            </div>
+          </div>
+          <button onclick="saveAdminMotorcycle()" class="w-full bg-trackGreen hover:bg-green-600 text-slate950 font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Sync to Live Cloud Firestore
+          </button>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate800">
+          <span class="text-slate-400">Restore factory baseline (70 bikes):</span>
+          <button onclick="restoreFactoryBaseline()" class="text-red-400 hover:text-red-300 font-bold text-xs border border-red-500/40 px-3 py-1 rounded-xl">
+            Reset to Default 70 Models
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. GEMINI AI ADVISOR MODAL -->
   <div id="aiAdvisorModal" class="fixed inset-0 z-50 bg-slate950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate900 border border-slate800 rounded-3xl max-w-lg w-full flex flex-col h-[580px] shadow-2xl overflow-hidden">
       <div class="bg-slate850 border-b border-slate800 p-4 flex items-center justify-between">
@@ -418,7 +540,7 @@
       </div>
 
       <div class="p-3 bg-slate850 border-t border-slate800 flex gap-2">
-        <input type="text" id="aiInput" onkeydown="if(event.key==='Enter') askAiAdvisor()" placeholder="e.g. Which bike is best for city & weekend touring under ₹3 Lakhs?" class="flex-grow bg-slate900 border border-slate700 rounded-xl px-3.5 py-2 text-xs text-white focus:border-cyanNeon outline-none">
+        <input type="text" id="aiInput" onkeydown="if(event.key==='Enter') askAiAdvisor()" placeholder="e.g. Which superbike gives best comfort for tall riders?" class="flex-grow bg-slate900 border border-slate700 rounded-xl px-3.5 py-2 text-xs text-white focus:border-cyanNeon outline-none">
         <button onclick="askAiAdvisor()" class="bg-cyanNeon text-slate950 font-bold px-4 py-2 rounded-xl text-xs hover:bg-cyan-300 transition">
           <i class="fa-solid fa-paper-plane"></i>
         </button>
@@ -426,7 +548,7 @@
     </div>
   </div>
 
-  <!-- MODAL: EMI CALCULATOR -->
+  <!-- 5. EMI CALCULATOR MODAL -->
   <div id="emiModal" class="fixed inset-0 z-50 bg-slate950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate900 border border-slate800 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate800 pb-3">
@@ -441,11 +563,11 @@
       <div class="space-y-3 text-xs">
         <div>
           <label class="block text-slate-400 mb-1">On-Road Bike Price (₹): <span id="emiPriceVal" class="text-white font-bold">₹2,00,000</span></label>
-          <input type="range" id="emiPriceRange" min="100000" max="3000000" step="25000" value="200000" oninput="calculateEmi()" class="w-full accent-cyanNeon">
+          <input type="range" id="emiPriceRange" min="100000" max="3500000" step="25000" value="200000" oninput="calculateEmi()" class="w-full accent-cyanNeon">
         </div>
         <div>
           <label class="block text-slate-400 mb-1">Down Payment (₹): <span id="emiDownVal" class="text-white font-bold">₹40,000</span></label>
-          <input type="range" id="emiDownRange" min="10000" max="1000000" step="10000" value="40000" oninput="calculateEmi()" class="w-full accent-cyanNeon">
+          <input type="range" id="emiDownRange" min="10000" max="1500000" step="10000" value="40000" oninput="calculateEmi()" class="w-full accent-cyanNeon">
         </div>
         <div>
           <label class="block text-slate-400 mb-1">Annual Interest Rate (%): <span id="emiRateVal" class="text-white font-bold">10.5%</span></label>
@@ -465,7 +587,8 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
+  <!-- Scripts -->
+  <script src="/catalog_data.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

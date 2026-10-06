@@ -212,21 +212,6 @@ fun MotoAppRoot(viewModel: MotoViewModel) {
                         colors = navItemColors(),
                         modifier = Modifier.testTag("nav_favorites")
                     )
-
-                    // 6. Admin Studio
-                    NavigationBarItem(
-                        selected = currentScreen is MotoScreen.Admin,
-                        onClick = { viewModel.navigateTo(MotoScreen.Admin) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.AdminPanelSettings,
-                                contentDescription = "Admin"
-                            )
-                        },
-                        label = { Text("Studio", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = navItemColors(),
-                        modifier = Modifier.testTag("nav_admin")
-                    )
                 }
             }
         }

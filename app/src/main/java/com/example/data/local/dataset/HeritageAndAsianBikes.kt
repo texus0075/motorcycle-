@@ -418,7 +418,7 @@ object HeritageAndAsianBikes {
             isTrending = true,
             isNew = true,
             isPopular = true,
-            heroImageUrl = "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=1000&q=80",
+            heroImageUrl = "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1000&q=80",
             source = "CFMOTO Global Sportbike Homologation",
             lastUpdated = "2024",
             specs = MotorcycleSpecs(
@@ -1170,7 +1170,7 @@ object HeritageAndAsianBikes {
             isTrending = true,
             isNew = true,
             isPopular = true,
-            heroImageUrl = "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=1000&q=80",
+            heroImageUrl = "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1000&q=80",
             source = "CFMOTO Global Flagship ADV Platform",
             lastUpdated = "2024",
             specs = MotorcycleSpecs(

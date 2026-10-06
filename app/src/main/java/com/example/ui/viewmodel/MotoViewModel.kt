@@ -580,7 +580,7 @@ class MotoViewModel(private val repository: MotorcycleRepository) : ViewModel() 
 
     init {
         viewModelScope.launch {
-            repository.seedIfEmpty()
+            repository.syncCatalogWithDefaults()
             // If Firebase is available, perform cloud sync and start real-time listener
             if (repository.isFirebaseConfigured()) {
                 repository.syncWithFirestore()

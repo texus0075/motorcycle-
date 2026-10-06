@@ -141,11 +141,19 @@ fun HomeScreen(
                         .padding(horizontal = 20.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.Bottom
                 ) {
+                    var adminTapCount by remember { androidx.compose.runtime.mutableIntStateOf(0) }
                     // Badge
                     Box(
                         modifier = Modifier
                             .background(CyanNeon.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
                             .border(1.dp, CyanNeon.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable {
+                                adminTapCount++
+                                if (adminTapCount >= 3) {
+                                    adminTapCount = 0
+                                    viewModel.navigateTo(MotoScreen.Admin)
+                                }
+                            }
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
