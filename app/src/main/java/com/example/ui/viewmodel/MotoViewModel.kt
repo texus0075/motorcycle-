@@ -1,7 +1,11 @@
 package com.example.ui.viewmodel
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthProvider
 import com.example.data.engine.ComparisonEngine
 import com.example.data.engine.NaturalSearchParser
 import com.example.data.local.PreloadedData
@@ -323,6 +327,20 @@ class MotoViewModel(private val repository: MotorcycleRepository) : ViewModel() 
         }
     }
 
+    fun submitUserRating(bikeId: String, newRating: Float) {
+        viewModelScope.launch {
+            val bike = allMotorcycles.value.find { it.id == bikeId } ?: return@launch
+            val newCount = bike.reviewCount + 1
+            val updatedRating = (((bike.rating * bike.reviewCount) + newRating) / newCount)
+            val rounded = (kotlin.math.round(updatedRating * 10) / 10.0).toFloat()
+            val updatedBike = bike.copy(
+                rating = rounded,
+                reviewCount = newCount
+            )
+            repository.insertMotorcycle(updatedBike)
+        }
+    }
+
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
@@ -381,11 +399,191 @@ class MotoViewModel(private val repository: MotorcycleRepository) : ViewModel() 
         }
     }
 
+    // --- FIREBASE AUTHENTICATION ---
+    val currentUser: StateFlow<FirebaseUser?> = repository.authService?.currentUser
+        ?: MutableStateFlow<FirebaseUser?>(null).asStateFlow()
+
+    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val service = repository.authService ?: run {
+                onResult(false, "Firebase Auth not available")
+                return@launch
+            }
+            when (val res = service.signInWithEmail(email, pass)) {
+                is com.example.data.auth.AuthResult.Success -> onResult(true, null)
+                is com.example.data.auth.AuthResult.Error -> onResult(false, res.message)
+            }
+        }
+    }
+
+    fun signUpWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val service = repository.authService ?: run {
+                onResult(false, "Firebase Auth not available")
+                return@launch
+            }
+            when (val res = service.signUpWithEmail(email, pass)) {
+                is com.example.data.auth.AuthResult.Success -> onResult(true, null)
+                is com.example.data.auth.AuthResult.Error -> onResult(false, res.message)
+            }
+        }
+    }
+
+    fun signInAnonymously(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val service = repository.authService ?: run {
+                onResult(false, "Firebase Auth not available")
+                return@launch
+            }
+            when (val res = service.signInAnonymously()) {
+                is com.example.data.auth.AuthResult.Success -> onResult(true, null)
+                is com.example.data.auth.AuthResult.Error -> onResult(false, res.message)
+            }
+        }
+    }
+
+    fun sendPhoneOtp(
+        phoneNumber: String,
+        activity: Activity,
+        callbacks: PhoneAuthProvider.OnVerificationStateChangedCallbacks
+    ) {
+        repository.authService?.sendPhoneOtp(phoneNumber, activity, callbacks)
+    }
+
+    fun verifyPhoneCredential(credential: PhoneAuthCredential, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val service = repository.authService ?: run {
+                onResult(false, "Firebase Auth not available")
+                return@launch
+            }
+            when (val res = service.signInWithPhoneCredential(credential)) {
+                is com.example.data.auth.AuthResult.Success -> onResult(true, null)
+                is com.example.data.auth.AuthResult.Error -> onResult(false, res.message)
+            }
+        }
+    }
+
+    fun signOut() {
+        repository.authService?.signOut()
+    }
+
+    // --- GEMINI AI ASSISTANT & ADVISOR ---
+    data class AiChatMessage(
+        val isUser: Boolean,
+        val text: String,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    private val _aiAdvisorMessages = MutableStateFlow<List<AiChatMessage>>(
+        listOf(
+            AiChatMessage(
+                isUser = false,
+                text = "👋 Welcome to MotoScope AI Advisor!\nI am powered by Google Gemini. Ask me about finding the best motorcycle for your budget, height, riding style, pillion comfort, or performance goals!"
+            )
+        )
+    )
+    val aiAdvisorMessages: StateFlow<List<AiChatMessage>> = _aiAdvisorMessages.asStateFlow()
+
+    private val _isAiAdvisorLoading = MutableStateFlow(false)
+    val isAiAdvisorLoading: StateFlow<Boolean> = _isAiAdvisorLoading.asStateFlow()
+
+    fun askMotoAdvisor(query: String) {
+        if (query.isBlank()) return
+        val userMsg = AiChatMessage(isUser = true, text = query.trim())
+        _aiAdvisorMessages.value = _aiAdvisorMessages.value + userMsg
+        _isAiAdvisorLoading.value = true
+
+        viewModelScope.launch {
+            val service = repository.geminiAiService
+            if (service == null) {
+                _aiAdvisorMessages.value = _aiAdvisorMessages.value + AiChatMessage(
+                    isUser = false,
+                    text = "Gemini AI service is not initialized."
+                )
+                _isAiAdvisorLoading.value = false
+                return@launch
+            }
+
+            // Build catalog context
+            val bikes = allMotorcycles.value.take(30)
+            val catalogContext = bikes.joinToString("\n") {
+                "- ${it.modelName} [ID: ${it.id}]: ${it.category}, ${it.specs.displacementCc}cc, ${it.specs.maxPowerHp} HP, ${it.specs.kerbWeightKg} kg, Seat: ${it.specs.seatHeightMm}mm, Mileage: ${it.specs.mileageKmpl} kmpl, Price: ${it.priceDisplay}"
+            }
+
+            val result = service.askAdvisor(query.trim(), catalogContext)
+            val reply = result.getOrElse { err ->
+                "⚠️ Could not reach Gemini AI: ${err.localizedMessage ?: "Network error"}. Please check your internet connection and try again."
+            }
+
+            _aiAdvisorMessages.value = _aiAdvisorMessages.value + AiChatMessage(isUser = false, text = reply)
+            _isAiAdvisorLoading.value = false
+        }
+    }
+
+    fun clearAiAdvisorChat() {
+        _aiAdvisorMessages.value = listOf(
+            AiChatMessage(
+                isUser = false,
+                text = "Chat cleared. What motorcycle question would you like to explore next?"
+            )
+        )
+    }
+
+    // --- GEMINI AI COMPARISON VERDICT ---
+    private val _aiComparisonVerdict = MutableStateFlow<String?>(null)
+    val aiComparisonVerdict: StateFlow<String?> = _aiComparisonVerdict.asStateFlow()
+
+    private val _isAiComparisonLoading = MutableStateFlow(false)
+    val isAiComparisonLoading: StateFlow<Boolean> = _isAiComparisonLoading.asStateFlow()
+
+    fun requestAiComparisonVerdict() {
+        val rep = _comparisonReport.value ?: return
+        val service = repository.geminiAiService ?: return
+
+        _isAiComparisonLoading.value = true
+        viewModelScope.launch {
+            val result = service.generateComparisonAiVerdict(
+                bikeA = rep.bikeA,
+                bikeB = rep.bikeB,
+                bikeC = rep.bikeC,
+                priority = _comparisonPriority.value.displayName
+            )
+            _aiComparisonVerdict.value = result.getOrElse { err ->
+                "⚠️ Gemini shootout unavailable: ${err.localizedMessage}"
+            }
+            _isAiComparisonLoading.value = false
+        }
+    }
+
+    // --- GEMINI AI INDIVIDUAL BIKE INSIGHTS ---
+    private val _aiBikeInsights = MutableStateFlow<Map<String, String>>(emptyMap())
+    val aiBikeInsights: StateFlow<Map<String, String>> = _aiBikeInsights.asStateFlow()
+
+    private val _isAiBikeInsightsLoading = MutableStateFlow(false)
+    val isAiBikeInsightsLoading: StateFlow<Boolean> = _isAiBikeInsightsLoading.asStateFlow()
+
+    fun requestBikeAiInsights(bikeId: String) {
+        val bike = allMotorcycles.value.firstOrNull { it.id == bikeId } ?: return
+        val service = repository.geminiAiService ?: return
+
+        _isAiBikeInsightsLoading.value = true
+        viewModelScope.launch {
+            val result = service.analyzeMotorcycleInsights(bike)
+            val currentMap = _aiBikeInsights.value.toMutableMap()
+            currentMap[bikeId] = result.getOrElse { err ->
+                "⚠️ Gemini analysis unavailable: ${err.localizedMessage}"
+            }
+            _aiBikeInsights.value = currentMap
+            _isAiBikeInsightsLoading.value = false
+        }
+    }
+
     init {
         viewModelScope.launch {
             repository.seedIfEmpty()
-            // If Firebase is available, start live listener for instantaneous cloud updates
+            // If Firebase is available, perform cloud sync and start real-time listener
             if (repository.isFirebaseConfigured()) {
+                repository.syncWithFirestore()
                 repository.startRealtimeListener { updatedCount ->
                     _syncMessage.value = "Live Cloud Update: $updatedCount motorcycle specs synced in real-time!"
                 }

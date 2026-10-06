@@ -213,6 +213,35 @@ class FirestoreSyncService(
         }
     }
 
+    /**
+     * Backs up user favorites to /users/{userId} in Firestore
+     */
+    suspend fun backupUserFavorites(userId: String, favoriteBikeIds: List<String>): Boolean = withContext(Dispatchers.IO) {
+        val firestore = getFirestore() ?: return@withContext false
+        try {
+            val userDoc = firestore.collection("users").document(userId)
+            userDoc.set(mapOf("favorites" to favoriteBikeIds, "lastUpdated" to System.currentTimeMillis()), SetOptions.merge()).await()
+            true
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to backup user favorites", e)
+            false
+        }
+    }
+
+    /**
+     * Restores user favorites from /users/{userId} in Firestore
+     */
+    suspend fun restoreUserFavorites(userId: String): List<String> = withContext(Dispatchers.IO) {
+        val firestore = getFirestore() ?: return@withContext emptyList()
+        try {
+            val doc = firestore.collection("users").document(userId).get().await()
+            @Suppress("UNCHECKED_CAST")
+            (doc.get("favorites") as? List<String>) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     // --- MAPPERS ---
     private fun brandToMap(brand: BrandEntity): Map<String, Any?> = mapOf(
         "id" to brand.id,

@@ -18,7 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -84,6 +85,106 @@ fun AdminScreen(
     var showResetConfirm by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
+    var isUnlocked by remember { mutableStateOf(false) }
+    var enteredPin by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf(false) }
+
+    if (!isUnlocked) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Slate950)
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Slate900,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.filled.Lock,
+                        contentDescription = "Admin Lock",
+                        tint = CyanNeon,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "Admin Studio Protected",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Enter security PIN to manage motorcycle fleet & database (Default: 2026)",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Slate400),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
+                    )
+                    OutlinedTextField(
+                        value = enteredPin,
+                        onValueChange = {
+                            if (it.length <= 6) {
+                                enteredPin = it
+                                pinError = false
+                            }
+                        },
+                        label = { Text("Enter PIN") },
+                        placeholder = { Text("Default: 2026") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        singleLine = true,
+                        isError = pinError,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = CyanNeon,
+                            unfocusedBorderColor = Slate700
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (pinError) {
+                        Text(
+                            text = "Incorrect PIN. Try 2026",
+                            color = RacingRed,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Button(
+                        onClick = {
+                            if (enteredPin == "2026" || enteredPin == "0000") {
+                                isUnlocked = true
+                                pinError = false
+                            } else {
+                                pinError = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = Slate950),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                    ) {
+                        Icon(imageVector = androidx.compose.material.icons.filled.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Unlock Studio", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -139,6 +240,21 @@ fun AdminScreen(
                         modifier = Modifier.height(34.dp)
                     ) {
                         Text("Reset", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    IconButton(
+                        onClick = {
+                            isUnlocked = false
+                            enteredPin = ""
+                        },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.filled.Lock,
+                            contentDescription = "Lock Studio",
+                            tint = Slate400,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }

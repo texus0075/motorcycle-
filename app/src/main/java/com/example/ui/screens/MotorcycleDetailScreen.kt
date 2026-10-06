@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
@@ -33,11 +34,13 @@ import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,12 +60,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.data.models.VariantEntity
 import com.example.ui.components.DetailSpecRow
+import com.example.ui.components.EmiCalculatorCard
 import com.example.ui.navigation.MotoScreen
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CyanNeon
@@ -95,10 +103,19 @@ fun MotorcycleDetailScreen(
     val isFavorite = favorites.any { it.motorcycleId == bikeId }
     val isInCompare = comparisonSlots.contains(bikeId)
 
+    val aiInsightsMap by viewModel.aiBikeInsights.collectAsStateWithLifecycle()
+    val isAiLoading by viewModel.isAiBikeInsightsLoading.collectAsStateWithLifecycle()
+    val currentInsight = aiInsightsMap[bikeId]
+    var expandAiInsights by remember { mutableStateOf(false) }
+
     // State for gallery angle selection
     var selectedAngle by remember { mutableStateOf("Hero") }
     // State for selected variant
     var selectedVariant by remember { mutableStateOf<VariantEntity?>(null) }
+    // State for rating modal
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var userRatingScore by remember { mutableFloatStateOf(5f) }
+    var ratingSubmitted by remember { mutableStateOf(false) }
 
     // Section expansion toggles
     var expandEngine by remember { mutableStateOf(true) }
@@ -273,15 +290,16 @@ fun MotorcycleDetailScreen(
                             )
                         }
 
-                        // Rating badge
+                        // Rating badge (clickable to rate)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .background(Slate850, RoundedCornerShape(8.dp))
                                 .border(1.dp, Slate800, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .clickable { showRatingDialog = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Icon(imageVector = Icons.Filled.Star, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Filled.Star, contentDescription = "Rate Bike", tint = AmberOrange, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(text = "${bike.rating}", fontWeight = FontWeight.Bold, color = Color.White)
                             Text(text = " (${bike.reviewCount})", color = Slate400, fontSize = 11.sp)
@@ -334,6 +352,172 @@ fun MotorcycleDetailScreen(
                                 text = if (isInCompare) "Comparing (In Dock)" else "Add to Compare",
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+                    }
+                }
+            }
+
+            // --- EMI & On-Road Estimator ---
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Slate950)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    EmiCalculatorCard(
+                        basePrice = selectedVariant?.price ?: bike.basePrice,
+                        currencySymbol = bike.currency
+                    )
+                }
+            }
+
+            // --- 2.8 GEMINI AI RIDER & OWNERSHIP INSIGHTS CARD ---
+            item {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Slate900,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .border(1.2.dp, CyanNeon.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .testTag("detail_gemini_insights_card")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    expandAiInsights = !expandAiInsights
+                                    if (expandAiInsights && currentInsight == null) {
+                                        viewModel.requestBikeAiInsights(bikeId)
+                                    }
+                                },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(CyanNeon.copy(alpha = 0.15f), CircleShape)
+                                        .border(1.dp, CyanNeon, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = CyanNeon,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Gemini AI Rider Analysis",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = CyanNeon.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "GEMINI 2.5",
+                                                color = CyanNeon,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Black,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "Ergonomics, pillion comfort & maintenance insights",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = Slate400
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = if (expandAiInsights) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = null,
+                                tint = CyanNeon
+                            )
+                        }
+
+                        AnimatedVisibility(visible = expandAiInsights) {
+                            Column(modifier = Modifier.padding(top = 12.dp)) {
+                                if (isAiLoading) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = CyanNeon,
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Gemini is evaluating geometry & rider telemetry...",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Slate400, fontSize = 12.sp)
+                                        )
+                                    }
+                                } else if (currentInsight != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Slate950,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .border(1.dp, Slate800, RoundedCornerShape(10.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = currentInsight,
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    color = Color.White,
+                                                    lineHeight = 20.sp,
+                                                    fontSize = 12.5.sp
+                                                )
+                                            )
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End
+                                            ) {
+                                                IconButton(
+                                                    onClick = { viewModel.requestBikeAiInsights(bikeId) },
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Refresh,
+                                                        contentDescription = "Regenerate",
+                                                        tint = CyanNeon,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { viewModel.requestBikeAiInsights(bikeId) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = Slate950),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Generate AI Rider Report", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -669,6 +853,74 @@ fun MotorcycleDetailScreen(
                     }
                 }
             }
+        }
+
+        // --- Rating & Review Dialog ---
+        if (showRatingDialog) {
+            AlertDialog(
+                onDismissRequest = { showRatingDialog = false },
+                containerColor = Slate900,
+                title = {
+                    Text(
+                        text = "Rate ${bike.modelName}",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "How would you rate this motorcycle's ride quality and performance?",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Slate400),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (star in 1..5) {
+                                Icon(
+                                    imageVector = if (star <= userRatingScore) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                    contentDescription = "Star $star",
+                                    tint = AmberOrange,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clickable { userRatingScore = star.toFloat() }
+                                        .padding(4.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${userRatingScore.toInt()} / 5 Stars",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = AmberOrange
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.submitUserRating(bike.id, userRatingScore)
+                            showRatingDialog = false
+                            ratingSubmitted = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = Slate950),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Submit Review", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRatingDialog = false }) {
+                        Text("Cancel", color = Slate400)
+                    }
+                }
+            )
         }
     }
 }

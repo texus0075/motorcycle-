@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,13 +24,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,10 +80,13 @@ fun ComparisonScreen(
     viewModel: MotoViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val report by viewModel.comparisonReport.collectAsStateWithLifecycle()
     val slotIds by viewModel.comparisonSlotIds.collectAsStateWithLifecycle()
     val priority by viewModel.comparisonPriority.collectAsStateWithLifecycle()
     val allMotorcycles by viewModel.allMotorcycles.collectAsStateWithLifecycle()
+    val aiVerdict by viewModel.aiComparisonVerdict.collectAsStateWithLifecycle()
+    val isAiLoading by viewModel.isAiComparisonLoading.collectAsStateWithLifecycle()
 
     var showAddBikeModal by remember { mutableStateOf(false) }
     var saveSuccessMessage by remember { mutableStateOf(false) }
@@ -111,25 +119,66 @@ fun ComparisonScreen(
             }
 
             if (report != null) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Slate850,
-                    modifier = Modifier
-                        .border(1.dp, Slate700, RoundedCornerShape(10.dp))
-                        .clickable {
-                            viewModel.saveCurrentComparison()
-                            saveSuccessMessage = true
+                val rep = report!!
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Share Button
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Slate850,
+                        modifier = Modifier
+                            .border(1.dp, Slate700, RoundedCornerShape(10.dp))
+                            .clickable {
+                                val bikeNames = if (rep.bikeC != null) {
+                                    "${rep.bikeA.modelName} vs ${rep.bikeB.modelName} vs ${rep.bikeC.modelName}"
+                                } else {
+                                    "${rep.bikeA.modelName} vs ${rep.bikeB.modelName}"
+                                }
+                                val winner = when (rep.overallWinnerIndex) {
+                                    0 -> rep.bikeA.modelName
+                                    1 -> rep.bikeB.modelName
+                                    else -> rep.bikeC?.modelName ?: rep.bikeA.modelName
+                                }
+                                val shareText = "MotoScope Shootout:\n$bikeNames\n\nOverall Winner: $winner\n\nCheck out the full specs comparison on MotoScope!"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Share Comparison"))
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Filled.Share, contentDescription = "Share", tint = CyanNeon, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Share",
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                            )
                         }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .testTag("save_comparison_btn")
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Filled.Bookmark, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (saveSuccessMessage) "Saved!" else "Save",
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontWeight = FontWeight.Bold)
-                        )
+                    }
+
+                    // Save Button
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Slate850,
+                        modifier = Modifier
+                            .border(1.dp, Slate700, RoundedCornerShape(10.dp))
+                            .clickable {
+                                viewModel.saveCurrentComparison()
+                                saveSuccessMessage = true
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .testTag("save_comparison_btn")
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Filled.Bookmark, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (saveSuccessMessage) "Saved!" else "Save",
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                 }
             }
@@ -369,6 +418,94 @@ fun ComparisonScreen(
                                     lineHeight = 20.sp
                                 )
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Gemini AI Shootout Section
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Slate950,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, CyanNeon.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                                .testTag("comparison_gemini_verdict_card")
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Filled.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = CyanNeon,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "GEMINI 2.5 SHOOTOUT VERDICT",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = CyanNeon,
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 1.sp
+                                            )
+                                        )
+                                    }
+
+                                    if (!isAiLoading && aiVerdict == null) {
+                                        Button(
+                                            onClick = { viewModel.requestAiComparisonVerdict() },
+                                            colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = Slate950),
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("Generate", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    } else if (!isAiLoading && aiVerdict != null) {
+                                        IconButton(
+                                            onClick = { viewModel.requestAiComparisonVerdict() },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Regenerate", tint = CyanNeon, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                if (isAiLoading) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                        CircularProgressIndicator(color = CyanNeon, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Gemini AI is analyzing dyno curves & ergonomics...",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Slate400, fontSize = 12.sp)
+                                        )
+                                    }
+                                } else if (aiVerdict != null) {
+                                    Text(
+                                        text = aiVerdict!!,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = Color.White,
+                                            lineHeight = 20.sp,
+                                            fontSize = 12.5.sp
+                                        )
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Tap 'Generate' to have Google Gemini synthesize a tailored head-to-head decision for your riding purpose.",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = Slate400, fontSize = 12.sp)
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1090249335282",
+    "project_id": "motohub-live-1a2b3c",
+    "storage_bucket": "motohub-live-1a2b3c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090249335282:android:2d55f9caead99592b54b6b",
+        "android_client_info": {
+          "package_name": "com.aistudio.motocatalog.kxrvpq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDifPNrXcVrvSjpoyGY61sQwZI45tQVrRI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

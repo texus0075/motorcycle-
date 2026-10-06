@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.firstOrNull
 
 class MotorcycleRepository(
     private val dao: MotoDao,
-    val firestoreSyncService: FirestoreSyncService? = null
+    val firestoreSyncService: FirestoreSyncService? = null,
+    val authService: com.example.data.auth.FirebaseAuthService? = null,
+    val geminiAiService: com.example.data.ai.GeminiAiService? = null
 ) {
 
     val allBrands: Flow<List<BrandEntity>> = dao.getAllBrands()

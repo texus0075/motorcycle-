@@ -23,9 +23,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,7 +43,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -84,6 +89,14 @@ fun SearchScreen(
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    var showAiAdvisor by remember { mutableStateOf(false) }
+
+    if (showAiAdvisor) {
+        com.example.ui.components.AiAdvisorDialog(
+            viewModel = viewModel,
+            onDismiss = { showAiAdvisor = false }
+        )
+    }
 
     LaunchedEffect(Unit) {
         if (searchQuery.isBlank()) {
@@ -122,15 +135,33 @@ fun SearchScreen(
                             )
                         },
                         trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { viewModel.updateSearchQuery("") },
+                                        modifier = Modifier.testTag("search_clear_button").size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Clear,
+                                            contentDescription = "Clear search",
+                                            tint = Slate400,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                                 IconButton(
-                                    onClick = { viewModel.updateSearchQuery("") },
-                                    modifier = Modifier.testTag("search_clear_button")
+                                    onClick = {
+                                        if (searchQuery.isNotBlank()) {
+                                            viewModel.askMotoAdvisor(searchQuery)
+                                        }
+                                        showAiAdvisor = true
+                                    },
+                                    modifier = Modifier.testTag("search_ai_btn").size(28.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.Clear,
-                                        contentDescription = "Clear search",
-                                        tint = Slate400,
+                                        imageVector = Icons.Filled.AutoAwesome,
+                                        contentDescription = "Ask AI",
+                                        tint = CyanNeon,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -285,6 +316,21 @@ fun SearchScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Button(
+                            onClick = {
+                                if (searchQuery.isNotBlank()) {
+                                    viewModel.askMotoAdvisor("What bikes in your catalog match or relate to: $searchQuery?")
+                                }
+                                showAiAdvisor = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = Slate950),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Ask Moto AI Advisor", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {

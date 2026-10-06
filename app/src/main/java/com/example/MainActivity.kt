@@ -76,7 +76,9 @@ class MainActivity : ComponentActivity() {
 
         val database = MotoScopeDatabase.getInstance(applicationContext)
         val firestoreSyncService = com.example.data.sync.FirestoreSyncService(applicationContext, database.motoDao())
-        val repository = MotorcycleRepository(database.motoDao(), firestoreSyncService)
+        val authService = com.example.data.auth.FirebaseAuthService(applicationContext)
+        val geminiAiService = com.example.data.ai.GeminiAiService(applicationContext)
+        val repository = MotorcycleRepository(database.motoDao(), firestoreSyncService, authService, geminiAiService)
 
         setContent {
             MotoScopeTheme(darkTheme = true) {

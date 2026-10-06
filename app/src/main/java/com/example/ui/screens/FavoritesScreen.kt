@@ -17,7 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -27,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.example.ui.components.AuthDialog
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -68,8 +70,11 @@ fun FavoritesScreen(
     val recentlyViewed by viewModel.recentlyViewed.collectAsStateWithLifecycle()
     val allMotorcycles by viewModel.allMotorcycles.collectAsStateWithLifecycle()
     val comparisonSlots by viewModel.comparisonSlotIds.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showAuthDialog by remember { mutableStateOf(false) }
+
     val bikeMap = remember(allMotorcycles) { allMotorcycles.associateBy { it.id } }
     val favIds = favorites.map { it.motorcycleId }.toSet()
     val compareIds = comparisonSlots.toSet()
@@ -87,15 +92,51 @@ fun FavoritesScreen(
                 .background(Slate900)
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            Text(
-                text = "Garage & Saved",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
-            )
-            Text(
-                text = "Bookmarked motorcycles, saved match reports & history",
-                style = MaterialTheme.typography.bodySmall.copy(color = Slate400)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Garage & Saved",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Bookmarked motorcycles, saved match reports & history",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Slate400)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (currentUser != null) Slate850 else CyanNeon.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (currentUser != null) Slate700 else CyanNeon),
+                    modifier = Modifier.clickable { showAuthDialog = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (currentUser != null) androidx.compose.material.icons.filled.AccountCircle else androidx.compose.material.icons.filled.Lock,
+                            contentDescription = null,
+                            tint = CyanNeon,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (currentUser != null) {
+                                (currentUser?.email?.substringBefore("@") ?: "Rider")
+                            } else "Sign In",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -290,6 +331,19 @@ fun FavoritesScreen(
                     }
                 }
             }
+        }
+
+        if (showAuthDialog) {
+            AuthDialog(
+                currentUser = currentUser,
+                onDismiss = { showAuthDialog = false },
+                onEmailSignIn = { email, pass, cb -> viewModel.signInWithEmail(email, pass, cb) },
+                onEmailSignUp = { email, pass, cb -> viewModel.signUpWithEmail(email, pass, cb) },
+                onAnonymousSignIn = { cb -> viewModel.signInAnonymously(cb) },
+                onSendPhoneOtp = { phone, act, cb -> viewModel.sendPhoneOtp(phone, act, cb) },
+                onVerifyPhoneCredential = { cred, cb -> viewModel.verifyPhoneCredential(cred, cb) },
+                onSignOut = { viewModel.signOut() }
+            )
         }
     }
 }
