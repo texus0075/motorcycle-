@@ -2,6 +2,7 @@ package com.example.ui.navigation
 
 sealed interface MotoScreen {
     data object Home : MotoScreen
+    data object Search : MotoScreen
     data object Catalog : MotoScreen
     data object Brands : MotoScreen
     data class BrandDetail(val brandId: String) : MotoScreen

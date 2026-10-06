@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -167,6 +168,14 @@ class MotoViewModel(private val repository: MotorcycleRepository) : ViewModel() 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
+
+    // Direct Room query flow for finding motorcycles by model or brand name
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val searchResults: StateFlow<List<MotorcycleEntity>> = _searchQuery
+        .flatMapLatest { query ->
+            repository.searchMotorcycles(query)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreloadedData.motorcycles)
 
     fun selectBrandFilter(brandId: String?) {
         _selectedBrandId.value = brandId

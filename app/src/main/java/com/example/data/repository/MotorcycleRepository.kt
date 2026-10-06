@@ -33,6 +33,9 @@ class MotorcycleRepository(
 
     suspend fun getBrandById(brandId: String): BrandEntity? = dao.getBrandById(brandId)
 
+    fun searchMotorcycles(query: String): Flow<List<MotorcycleEntity>> =
+        if (query.isBlank()) dao.getAllMotorcycles() else dao.searchMotorcyclesByQuery(query.trim())
+
     fun getMotorcyclesByBrand(brandId: String): Flow<List<MotorcycleEntity>> =
         dao.getMotorcyclesByBrand(brandId)
 

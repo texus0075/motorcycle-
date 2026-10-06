@@ -57,6 +57,7 @@ import com.example.ui.screens.ComparisonScreen
 import com.example.ui.screens.FavoritesScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MotorcycleDetailScreen
+import com.example.ui.screens.SearchScreen
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CyanNeon
 import com.example.ui.theme.MotoScopeTheme
@@ -235,6 +236,7 @@ fun MotoAppRoot(viewModel: MotoViewModel) {
         ) {
             when (val screen = currentScreen) {
                 is MotoScreen.Home -> HomeScreen(viewModel = viewModel)
+                is MotoScreen.Search -> SearchScreen(viewModel = viewModel)
                 is MotoScreen.Catalog -> CatalogScreen(viewModel = viewModel)
                 is MotoScreen.Brands -> BrandsScreen(viewModel = viewModel)
                 is MotoScreen.BrandDetail -> BrandDetailScreen(brandId = screen.brandId, viewModel = viewModel)

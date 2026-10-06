@@ -61,6 +61,21 @@ interface MotoDao {
     @Query("SELECT * FROM motorcycles WHERE category = :category ORDER BY rating DESC")
     fun getMotorcyclesByCategory(category: String): Flow<List<MotorcycleEntity>>
 
+    @Query("""
+        SELECT * FROM motorcycles 
+        WHERE modelName LIKE '%' || :query || '%' 
+           OR brandId LIKE '%' || :query || '%'
+        ORDER BY 
+            CASE 
+                WHEN modelName LIKE :query || '%' THEN 1
+                WHEN brandId LIKE :query || '%' THEN 2
+                ELSE 3 
+            END,
+            rating DESC,
+            modelName ASC
+    """)
+    fun searchMotorcyclesByQuery(query: String): Flow<List<MotorcycleEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMotorcycle(motorcycle: MotorcycleEntity)
 
